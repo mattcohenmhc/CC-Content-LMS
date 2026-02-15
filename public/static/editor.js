@@ -379,13 +379,42 @@ async function launchGenSparkAgent() {
   showLoading('Launching GenSpark AI', 'Creating your professional slide deck... This may take a few minutes.')
 
   try {
-    // In a real implementation, this would call create_agent tool from the backend
-    // Since create_agent is a backend-only tool, we show instructions
+    // Call backend to launch agent
+    const response = await axios.post('/api/genspark/launch-agent', {
+      presentation_id: PRESENTATION_ID
+    })
     
-    // For demonstration, simulate the agent creation
-    await new Promise(resolve => setTimeout(resolve, 3000))
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to launch agent')
+    }
+
+    // The backend returns the create_agent params
+    const agentParams = response.data.create_agent_params
     
-    // Simulated response - in production this would come from create_agent
+    hideLoading()
+    
+    // Show instructions for manual agent creation
+    const instructions = `
+To complete the GenSpark integration:
+
+1. The following parameters need to be passed to create_agent:
+   - task_type: "${agentParams.task_type}"
+   - task_name: "${agentParams.task_name}"
+   - query: "${agentParams.query}"
+
+2. Call create_agent tool with these parameters
+
+3. Update the presentation with the response:
+   - project_url from create_agent
+   - task_id or session_id
+
+For now, I'll simulate the agent creation with a demo URL.
+    `.trim()
+    
+    console.log('GenSpark Agent Parameters:', agentParams)
+    console.log(instructions)
+    
+    // Simulate for demo - in production this would use real create_agent response
     const mockAgentResponse = {
       task_id: 'task-' + Date.now(),
       session_id: 'session-' + Date.now(),
@@ -404,19 +433,17 @@ async function launchGenSparkAgent() {
     editorState.editorUrl = mockAgentResponse.project_url
     editorState.needsAgentCreation = false
     
-    hideLoading()
-    alert('✅ GenSpark AI slides created! Opening editor...\n\n' +
-          'NOTE: In production, this would open the actual GenSpark SuperAgent editor where you can:\n' +
-          '• Edit slides with AI prompts\n' +
-          '• Change images and layouts\n' +
-          '• Customize branding\n' +
-          '• Add animations\n\n' +
-          'For now, this is a demo. The actual integration requires calling the create_agent tool from your backend.')
+    alert('✅ GenSpark editor ready!\n\n' +
+          '🔧 INTEGRATION NOTE:\n' +
+          'To use real GenSpark AI, you need to call create_agent from your backend.\n\n' +
+          'The parameters have been prepared and logged to console.\n' +
+          'In production, your backend would call create_agent and return the real project_url.')
     
     renderEditor()
     
   } catch (error) {
     hideLoading()
+    console.error('Launch error:', error)
     alert('Failed to launch GenSpark agent: ' + error.message)
   }
 }

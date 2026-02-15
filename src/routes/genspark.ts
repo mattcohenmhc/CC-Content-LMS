@@ -1,6 +1,10 @@
 import { Hono } from 'hono'
 import type { Bindings } from '../types'
 
+// Import create_agent - this is available as a backend tool
+// Note: In Cloudflare Workers environment, this would need to be implemented differently
+// For now, we'll create a structure that can call it
+
 const genspark = new Hono<{ Bindings: Bindings }>()
 
 // IMPORTANT: This endpoint should be called from the backend to trigger create_agent
@@ -110,6 +114,92 @@ genspark.post('/update-agent-info', async (c) => {
   } catch (error) {
     console.error('Error updating agent info:', error)
     return c.json({ success: false, error: 'Failed to update agent info' }, 500)
+  }
+})
+
+// NEW: Actually launch GenSpark agent using create_agent tool
+genspark.post('/launch-agent', async (c) => {
+  try {
+    const { presentation_id } = await c.req.json()
+
+    if (!presentation_id) {
+      return c.json({ success: false, error: 'Missing presentation_id' }, 400)
+    }
+
+    // Get presentation details
+    const presentation = await c.env.DB.prepare(`
+      SELECT * FROM presentations WHERE id = ?
+    `).bind(presentation_id).first()
+
+    if (!presentation) {
+      return c.json({ success: false, error: 'Presentation not found' }, 404)
+    }
+
+    const settings = presentation.settings ? JSON.parse(presentation.settings as string) : {}
+    const fileName = presentation.original_filename as string
+
+    // Prepare instructions for GenSpark
+    const instructions = `
+You are a professional presentation designer and LMS content creator.
+
+Task: Convert the uploaded ${fileName.endsWith('.pdf') ? 'PDF' : 'PowerPoint'} presentation into a modern, professional slide deck suitable for an LMS (Learning Management System).
+
+Requirements:
+1. Maintain the original content and structure
+2. Apply a clean, modern design with consistent branding
+3. Use professional color schemes and typography
+4. Make each slide self-contained as a lesson
+5. Add clear titles and organize content logically
+6. Ensure readability and visual hierarchy
+7. Use bullet points, images, and diagrams where appropriate
+
+${settings.enable_quizzes ? `
+8. Prepare quiz questions based on content (user will configure placement later)
+` : ''}
+
+${settings.enable_narration ? `
+9. Ensure content is suitable for audio narration
+` : ''}
+
+Output: A complete presentation with all slides properly formatted and ready for LMS use.
+
+The user will be able to edit the slides using your SuperAgent editor interface. They can:
+- Prompt for changes to any slide or across the entire deck
+- Change images and layouts
+- Modify text and styling
+- Add animations for LMS-style navigation
+- Generate quizzes with custom settings
+- Add narration to slides
+
+After they finish editing, they will export the final presentation to their LMS platform.
+    `.trim()
+
+    const query = `Create a professional LMS presentation from "${fileName}". Transform the content into modern, clean slides with consistent design theme and make each slide its own lesson. Apply professional branding and ensure the presentation is ready for interactive learning.`
+
+    const taskName = fileName.replace(/\.(pptx|pdf)$/i, '')
+
+    // IMPORTANT: This is where we need to call create_agent
+    // Since this is running in a Cloudflare Worker, we need to make an HTTP request
+    // to your backend service that has access to create_agent
+    
+    // For now, return the data that should be passed to create_agent
+    // In production, you would call: const agentResponse = await create_agent({...})
+    
+    return c.json({ 
+      success: true,
+      message: 'create_agent should be called here',
+      create_agent_params: {
+        task_type: 'slides',
+        task_name: taskName,
+        query: query,
+        instructions: instructions
+      },
+      presentation_id: presentation_id
+    })
+
+  } catch (error) {
+    console.error('Error launching agent:', error)
+    return c.json({ success: false, error: 'Failed to launch agent' }, 500)
   }
 })
 
