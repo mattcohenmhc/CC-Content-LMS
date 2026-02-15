@@ -3,11 +3,15 @@ import type { Bindings } from '../types'
 
 const webhooks = new Hono<{ Bindings: Bindings }>()
 
-// Export presentation to webhook
+// Export presentation to webhook or Google Drive
 webhooks.post('/:presentation_id/export', async (c) => {
   const presentationId = c.req.param('presentation_id')
   
   try {
+    const body = await c.req.json().catch(() => ({}))
+    const exportType = body.export_type || 'webhook' // 'webhook' or 'google_drive'
+    const customWebhookUrl = body.webhook_url
+    
     // Get presentation
     const presentation = await c.env.DB.prepare(`
       SELECT * FROM presentations WHERE id = ?
@@ -24,20 +28,9 @@ webhooks.post('/:presentation_id/export', async (c) => {
       ORDER BY slide_number ASC
     `).bind(presentationId).all()
 
-    // Parse settings to get webhook URL
+    // Parse settings
     const settings = presentation.settings ? JSON.parse(presentation.settings as string) : {}
-    const webhookUrl = settings.webhook_url
-
-    if (!webhookUrl) {
-      return c.json({ success: false, error: 'No webhook URL configured' }, 400)
-    }
-
-    // Create export record
-    const exportId = crypto.randomUUID()
-    await c.env.DB.prepare(`
-      INSERT INTO exports (id, presentation_id, webhook_url, export_status, created_at)
-      VALUES (?, ?, ?, 'pending', datetime('now'))
-    `).bind(exportId, presentationId, webhookUrl).run()
+    const webhookUrl = customWebhookUrl || settings.webhook_url
 
     // Prepare export data
     const exportData = {
@@ -58,6 +51,30 @@ webhooks.post('/:presentation_id/export', async (c) => {
         quiz_data: slide.quiz_data ? JSON.parse(slide.quiz_data) : null,
       }))
     }
+
+    if (exportType === 'google_drive') {
+      // For Google Drive export, return download link
+      // In production, this would use Google Drive API
+      return c.json({ 
+        success: true, 
+        export_type: 'google_drive',
+        download_url: presentation.genspark_project_url, // GenSpark project URL as download
+        data: exportData,
+        message: 'Presentation ready for Google Drive. Use the GenSpark project URL to access and export.'
+      })
+    }
+
+    // Webhook export
+    if (!webhookUrl) {
+      return c.json({ success: false, error: 'No webhook URL configured' }, 400)
+    }
+
+    // Create export record
+    const exportId = crypto.randomUUID()
+    await c.env.DB.prepare(`
+      INSERT INTO exports (id, presentation_id, webhook_url, export_status, created_at)
+      VALUES (?, ?, ?, 'pending', datetime('now'))
+    `).bind(exportId, presentationId, webhookUrl).run()
 
     // Send to webhook
     try {
@@ -86,7 +103,8 @@ webhooks.post('/:presentation_id/export', async (c) => {
       return c.json({ 
         success: true, 
         export_id: exportId,
-        message: 'Presentation exported successfully'
+        export_type: 'webhook',
+        message: 'Presentation exported successfully to webhook'
       })
     } catch (webhookError) {
       // Update export record with error

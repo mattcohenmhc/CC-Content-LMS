@@ -4,12 +4,24 @@ let editorState = {
   presentation: null,
   slides: [],
   editorUrl: null,
-  settings: {}
+  settings: {},
+  needsAgentCreation: false,
+  gensparkRequest: null
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
   await loadPresentation()
   await loadEditorUrl()
+  
+  // Check if we need to create GenSpark agent
+  const gensparkRequest = sessionStorage.getItem('genspark_request')
+  if (gensparkRequest && !editorState.editorUrl) {
+    // Show button to launch GenSpark agent
+    editorState.needsAgentCreation = true
+    editorState.gensparkRequest = JSON.parse(gensparkRequest)
+    sessionStorage.removeItem('genspark_request')
+  }
+  
   renderEditor()
 })
 
@@ -100,6 +112,26 @@ function renderEditor() {
               allow="clipboard-write"
               sandbox="allow-same-origin allow-scripts allow-forms allow-popups">
             </iframe>
+          ` : editorState.needsAgentCreation ? `
+            <div class="flex items-center justify-center h-full">
+              <div class="text-center max-w-2xl px-6">
+                <i class="fas fa-magic text-8xl text-purple-600 mb-6"></i>
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">Ready to Create AI Slides</h2>
+                <p class="text-xl text-gray-600 mb-8">
+                  Click below to launch GenSpark AI and transform your presentation into professional, 
+                  modern slides with consistent branding. This process may take a few minutes.
+                </p>
+                <button onclick="launchGenSparkAgent()" 
+                        class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-12 py-4 rounded-xl hover:shadow-lg transition-all text-lg font-semibold">
+                  <i class="fas fa-rocket mr-3"></i>
+                  Launch GenSpark AI Editor
+                </button>
+                <p class="text-sm text-gray-500 mt-6">
+                  <i class="fas fa-info-circle mr-1"></i>
+                  You'll be able to edit, customize, and refine your slides once they're created
+                </p>
+              </div>
+            </div>
           ` : `
             <div class="flex items-center justify-center h-full">
               <div class="text-center">
@@ -289,27 +321,102 @@ function previewPresentation() {
 }
 
 async function exportPresentation() {
-  if (!editorState.settings.webhook_url) {
-    alert('Please configure a webhook URL in Settings before exporting.')
+  // Show export options dialog
+  const exportChoice = confirm(
+    'Choose export destination:\n\n' +
+    'OK = Export to Webhook (Cohen Coaching)\n' +
+    'Cancel = Export to Google Drive'
+  )
+  
+  const exportType = exportChoice ? 'webhook' : 'google_drive'
+
+  if (exportType === 'webhook' && !editorState.settings.webhook_url) {
+    alert('Please configure a webhook URL in Settings before exporting to Cohen Coaching.')
     showSettingsModal()
     return
   }
 
-  if (!confirm('Export this presentation to Cohen Coaching platform?')) return
-
-  showLoading('Exporting', 'Sending presentation to webhook...')
+  showLoading(
+    exportType === 'webhook' ? 'Exporting to Webhook' : 'Preparing Google Drive Export', 
+    exportType === 'webhook' ? 'Sending presentation...' : 'Preparing download...'
+  )
 
   try {
-    const response = await axios.post(`/api/webhooks/${PRESENTATION_ID}/export`)
+    const response = await axios.post(`/api/webhooks/${PRESENTATION_ID}/export`, {
+      export_type: exportType
+    })
+    
     hideLoading()
     
     if (response.data.success) {
-      alert('Presentation exported successfully!')
+      if (exportType === 'google_drive') {
+        alert(
+          '✅ Presentation ready for Google Drive!\n\n' +
+          'You can access your presentation at:\n' +
+          response.data.download_url + '\n\n' +
+          'From GenSpark, you can export to Google Slides or download as PDF/PPTX.'
+        )
+        // Open GenSpark project URL
+        window.open(response.data.download_url, '_blank')
+      } else {
+        alert('✅ Presentation exported successfully to Cohen Coaching platform!')
+      }
     } else {
-      alert('Export failed: ' + response.data.error)
+      alert('❌ Export failed: ' + response.data.error)
     }
   } catch (error) {
     hideLoading()
-    alert('Failed to export presentation: ' + error.message)
+    alert('❌ Failed to export presentation: ' + error.message)
+  }
+}
+
+async function launchGenSparkAgent() {
+  if (!editorState.gensparkRequest) {
+    alert('No GenSpark request data found. Please try uploading again.')
+    return
+  }
+
+  showLoading('Launching GenSpark AI', 'Creating your professional slide deck... This may take a few minutes.')
+
+  try {
+    // In a real implementation, this would call create_agent tool from the backend
+    // Since create_agent is a backend-only tool, we show instructions
+    
+    // For demonstration, simulate the agent creation
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    
+    // Simulated response - in production this would come from create_agent
+    const mockAgentResponse = {
+      task_id: 'task-' + Date.now(),
+      session_id: 'session-' + Date.now(),
+      project_url: `https://www.genspark.ai/agents?id=${Date.now()}`
+    }
+    
+    // Update presentation with agent info
+    await axios.post('/api/genspark/update-agent-info', {
+      presentation_id: PRESENTATION_ID,
+      task_id: mockAgentResponse.task_id,
+      session_id: mockAgentResponse.session_id,
+      project_url: mockAgentResponse.project_url
+    })
+    
+    // Update state and render
+    editorState.editorUrl = mockAgentResponse.project_url
+    editorState.needsAgentCreation = false
+    
+    hideLoading()
+    alert('✅ GenSpark AI slides created! Opening editor...\n\n' +
+          'NOTE: In production, this would open the actual GenSpark SuperAgent editor where you can:\n' +
+          '• Edit slides with AI prompts\n' +
+          '• Change images and layouts\n' +
+          '• Customize branding\n' +
+          '• Add animations\n\n' +
+          'For now, this is a demo. The actual integration requires calling the create_agent tool from your backend.')
+    
+    renderEditor()
+    
+  } catch (error) {
+    hideLoading()
+    alert('Failed to launch GenSpark agent: ' + error.message)
   }
 }

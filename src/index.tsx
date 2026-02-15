@@ -13,6 +13,7 @@ import slides from './routes/slides'
 import editor from './routes/editor'
 import player from './routes/player'
 import webhooks from './routes/webhooks'
+import genspark from './routes/genspark'
 
 // API Routes
 app.route('/api/presentations', presentations)
@@ -20,6 +21,7 @@ app.route('/api/slides', slides)
 app.route('/api/editor', editor)
 app.route('/api/player', player)
 app.route('/api/webhooks', webhooks)
+app.route('/api/genspark', genspark)
 
 // Health check
 app.get('/api/health', (c) => {

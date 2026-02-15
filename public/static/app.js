@@ -224,13 +224,35 @@ async function startProcessing() {
     const uploadResponse = await axios.post(`${API_BASE}/presentations/upload`, formData)
     const { presentation_id, file_data, file_name } = uploadResponse.data
 
-    updateProcessingStatus('Creating AI slides with GenSpark...')
+    updateProcessingStatus('Preparing GenSpark AI Slides...')
 
-    // Note: In production, you would call the GenSpark API here
-    // For now, we'll simulate the process
-    await simulateGenSparkProcessing(presentation_id, file_name, file_data, settings)
+    // Prepare GenSpark request
+    const gensparkPrepResponse = await axios.post(`${API_BASE}/genspark/create-slides`, {
+      presentation_id,
+      file_name,
+      file_data,
+      settings
+    })
 
-    updateProcessingStatus('Complete! Redirecting to editor...')
+    if (!gensparkPrepResponse.data.success) {
+      throw new Error(gensparkPrepResponse.data.error || 'Failed to prepare slides')
+    }
+
+    updateProcessingStatus('Creating AI slides with GenSpark... This may take a few minutes.')
+
+    // Call GenSpark create_agent API
+    const gensparkRequest = gensparkPrepResponse.data.genspark_request
+    
+    // Note: Since create_agent is a tool available on the backend, 
+    // we need to make a backend call that uses the tool
+    // For now, let's redirect to editor where user can manually trigger it
+    // In production, backend would call create_agent directly
+    
+    // Store the request in session/state for the editor to use
+    sessionStorage.setItem('genspark_request', JSON.stringify(gensparkRequest))
+    sessionStorage.setItem('presentation_id', presentation_id)
+    
+    updateProcessingStatus('Redirecting to GenSpark editor...')
     
     setTimeout(() => {
       window.location.href = `/editor/${presentation_id}`
@@ -238,20 +260,9 @@ async function startProcessing() {
 
   } catch (error) {
     console.error('Processing error:', error)
-    alert('Failed to process presentation. Please try again.')
+    alert('Failed to process presentation: ' + (error.response?.data?.error || error.message))
     document.getElementById('loading').classList.add('hidden')
   }
-}
-
-async function simulateGenSparkProcessing(presentationId, fileName, fileData, settings) {
-  // In production, this would call the GenSpark create_agent API
-  // For now, update the presentation with mock data
-  
-  await axios.post(`${API_BASE}/presentations/${presentationId}/genspark`, {
-    task_id: 'mock-task-' + Date.now(),
-    project_url: `https://genspark.ai/agents?id=mock-${presentationId}`,
-    status: 'completed'
-  })
 }
 
 function updateProcessingStatus(message) {
