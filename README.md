@@ -28,7 +28,100 @@
 - **Slides**: Individual slide content with animations, quizzes, and narration
 - **Exports**: Webhook export tracking for Cohen Coaching integration
 
-## Features
+## 🚀 User Flow
+
+### **Step 1: Upload Presentation**
+1. User uploads PPTX or PDF file via drag & drop
+2. Configure settings:
+   - Enable/disable narration with voice selection
+   - Set quiz frequency (after each slide or custom count)
+   - Enter webhook URL for Cohen Coaching export (optional)
+3. Click "Generate AI Presentation"
+
+### **Step 2: GenSpark AI Processing**
+1. File is saved to database with "processing" status
+2. System prepares GenSpark request with:
+   - Professional design instructions
+   - LMS-specific formatting
+   - Brand consistency requirements
+3. User is redirected to editor page
+
+### **Step 3: Launch GenSpark Editor**
+1. Editor page displays "Launch GenSpark AI Editor" button
+2. User clicks to trigger GenSpark slides creation
+3. GenSpark SuperAgent creates professional slides (calls `create_agent` tool)
+4. GenSpark editor loads in iframe for user to edit
+
+### **Step 4: Edit with GenSpark SuperAgent**
+Users can make changes using GenSpark's AI editor:
+- **Prompt for changes** across entire deck or specific slides
+- **Change images** - AI can find and replace images
+- **Modify layouts** - Adjust slide structure and design
+- **Update content** - Edit text, add/remove elements
+- **Apply branding** - Consistent colors, fonts, themes
+- **Add animations** - LMS-style click-through animations
+- **Generate quizzes** - AI creates quiz questions from content
+- **Add narration** - Text-to-speech for each slide
+
+### **Step 5: Export Presentation**
+After editing is complete, user chooses export destination:
+
+**Option 1: Export to Webhook (Cohen Coaching)**
+- Sends complete presentation data via webhook
+- Includes all slides, quizzes, narration URLs, animations
+- Tracked in exports table with status
+
+**Option 2: Export to Google Drive**
+- Opens GenSpark project URL in new tab
+- User can export from GenSpark to Google Slides
+- Or download as PDF/PPTX
+
+### **Step 6: Play in LMS**
+- Presentation can be viewed in full-screen player
+- LMS-style navigation with keyboard controls
+- Animated transitions between slides
+- Interactive quizzes with instant feedback
+- Audio narration (if enabled)
+- Progress tracking
+
+---
+
+## 🔄 Integration Flow Details
+
+### **Upload to Editor Flow:**
+```
+Upload PPTX/PDF 
+  → Save to database (status: processing)
+  → Prepare GenSpark request data
+  → Redirect to editor page
+  → Show "Launch GenSpark" button
+  → User clicks button
+  → Call create_agent (slides task)
+  → GenSpark creates AI slides
+  → Editor iframe loads with project URL
+  → User edits in GenSpark SuperAgent
+```
+
+### **Export Flow:**
+```
+User finishes editing
+  → Clicks "Export" button
+  → Choose: Webhook or Google Drive
+  
+  If Webhook:
+    → Fetch all slides from database
+    → Format as JSON with metadata
+    → Send POST to webhook URL
+    → Track export status
+    → Show confirmation
+    
+  If Google Drive:
+    → Open GenSpark project URL
+    → User exports from GenSpark UI
+    → Download or save to Google Drive
+```
+
+---
 
 ### ✅ Currently Implemented
 1. **File Upload System**
@@ -289,3 +382,57 @@ npm run db:console:local
 
 ## Last Updated
 2026-02-15
+
+---
+
+## 📝 Implementation Summary (Latest Update)
+
+### ✅ What's Working Now:
+1. **Complete Upload Flow** - Upload PPTX/PDF with settings configuration
+2. **GenSpark Integration Prepared** - Request data formatted for create_agent
+3. **Editor Launch UI** - Button to trigger GenSpark AI slide creation
+4. **Dual Export Options** - Webhook (Cohen Coaching) or Google Drive
+5. **Full Database Schema** - All tables and relationships complete
+6. **LMS Player** - Complete with quizzes, animations, narration support
+7. **Responsive UI** - Modern interface with TailwindCSS
+
+### 🔧 Integration Point for Production:
+
+The app is ready for GenSpark integration. To make it production-ready:
+
+**Backend Call to create_agent:**
+```typescript
+// In src/routes/genspark.ts - add actual create_agent call
+const agentResponse = await create_agent({
+  task_type: 'slides',
+  task_name: fileName,
+  query: query,
+  instructions: instructions
+})
+
+// Then save the response
+await updatePresentationWithAgentInfo(
+  presentationId,
+  agentResponse.task_id,
+  agentResponse.project_url
+)
+```
+
+The frontend will then automatically:
+- Load the GenSpark editor in an iframe
+- Allow user to edit with AI prompts
+- Provide export options when done
+
+### 🎯 Current User Experience:
+
+1. Upload → Settings → Click "Generate"
+2. Redirected to editor with "Launch GenSpark AI Editor" button
+3. Click button → (Simulated agent creation for demo)
+4. Edit in GenSpark SuperAgent interface
+5. Export via Webhook or Google Drive
+6. View in LMS Player with full interactivity
+
+### 📍 Live URLs:
+- **Application**: https://3000-i1par5ljavte6nc7nl001-cbeee0f9.sandbox.novita.ai
+- **GitHub**: https://github.com/mattcohenmhc/CC-Content-LMS
+
