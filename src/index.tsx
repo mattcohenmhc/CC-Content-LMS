@@ -26,6 +26,31 @@ app.get('/api/health', (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
+// Editor page
+app.get('/editor/:id', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Editor - LMS Presentation Studio</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <style>
+          body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; }
+        </style>
+    </head>
+    <body>
+        <div id="app"></div>
+        
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <script src="/static/editor.js"></script>
+    </body>
+    </html>
+  `)
+})
+
 // Main page
 app.get('/', (c) => {
   return c.html(`
