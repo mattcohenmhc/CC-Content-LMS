@@ -14,9 +14,9 @@ const genspark = new Hono<{ Bindings: Bindings }>()
 // Create GenSpark slides from uploaded file
 genspark.post('/create-slides', async (c) => {
   try {
-    const { presentation_id, file_name, file_data, settings } = await c.req.json()
+    const { presentation_id, file_name, settings } = await c.req.json()
 
-    if (!presentation_id || !file_name || !file_data) {
+    if (!presentation_id || !file_name) {
       return c.json({ success: false, error: 'Missing required parameters' }, 400)
     }
 

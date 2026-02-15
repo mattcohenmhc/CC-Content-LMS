@@ -222,7 +222,7 @@ async function startProcessing() {
 
   try {
     const uploadResponse = await axios.post(`${API_BASE}/presentations/upload`, formData)
-    const { presentation_id, file_data, file_name } = uploadResponse.data
+    const { presentation_id, file_name } = uploadResponse.data
 
     updateProcessingStatus('Preparing GenSpark AI Slides...')
 
@@ -230,7 +230,6 @@ async function startProcessing() {
     const gensparkPrepResponse = await axios.post(`${API_BASE}/genspark/create-slides`, {
       presentation_id,
       file_name,
-      file_data,
       settings
     })
 

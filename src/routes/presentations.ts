@@ -68,9 +68,16 @@ presentations.post('/upload', async (c) => {
     const fileType = file.name.endsWith('.pdf') ? 'pdf' : 'pptx'
     const presentationId = crypto.randomUUID()
 
-    // Read file content
-    const fileBuffer = await file.arrayBuffer()
-    const base64File = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)))
+    // Get file size for validation
+    const fileSize = file.size
+    const maxSize = 50 * 1024 * 1024 // 50MB limit
+    
+    if (fileSize > maxSize) {
+      return c.json({ 
+        success: false, 
+        error: 'File too large. Maximum size is 50MB.' 
+      }, 400)
+    }
 
     // Insert into database
     await c.env.DB.prepare(`
@@ -85,11 +92,13 @@ presentations.post('/upload', async (c) => {
     ).run()
 
     // Return presentation ID for GenSpark processing
+    // Note: File content is not returned to avoid memory issues
+    // GenSpark will be provided with the file through the editor interface
     return c.json({ 
       success: true, 
       presentation_id: presentationId,
-      file_data: base64File,
       file_name: file.name,
+      file_size: fileSize,
       settings 
     })
   } catch (error) {
