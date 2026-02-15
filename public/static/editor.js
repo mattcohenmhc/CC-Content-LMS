@@ -393,53 +393,31 @@ async function launchGenSparkAgent() {
     
     hideLoading()
     
-    // Show instructions for manual agent creation
-    const instructions = `
-To complete the GenSpark integration:
+    // Show clear instructions for the user
+    const message = `
+🎯 READY TO CREATE GENSPARK SLIDES!
 
-1. The following parameters need to be passed to create_agent:
-   - task_type: "${agentParams.task_type}"
-   - task_name: "${agentParams.task_name}"
-   - query: "${agentParams.query}"
+Your presentation ID is: ${PRESENTATION_ID}
 
-2. Call create_agent tool with these parameters
+To create real GenSpark AI slides:
 
-3. Update the presentation with the response:
-   - project_url from create_agent
-   - task_id or session_id
+1. Copy this presentation ID: ${PRESENTATION_ID}
 
-For now, I'll simulate the agent creation with a demo URL.
-    `.trim()
+2. Tell the AI assistant:
+   "Create GenSpark slides for presentation ID: ${PRESENTATION_ID}"
+
+3. The AI will call create_agent and update your presentation
+
+4. Then refresh this page to see the GenSpark editor
+
+OR
+
+You can view the demo presentation with working GenSpark editor:
+Presentation ID: 92260480-3626-4139-89e3-818b81f6bd93
+`.trim()
     
     console.log('GenSpark Agent Parameters:', agentParams)
-    console.log(instructions)
-    
-    // Simulate for demo - in production this would use real create_agent response
-    const mockAgentResponse = {
-      task_id: 'task-' + Date.now(),
-      session_id: 'session-' + Date.now(),
-      project_url: `https://www.genspark.ai/agents?id=${Date.now()}`
-    }
-    
-    // Update presentation with agent info
-    await axios.post('/api/genspark/update-agent-info', {
-      presentation_id: PRESENTATION_ID,
-      task_id: mockAgentResponse.task_id,
-      session_id: mockAgentResponse.session_id,
-      project_url: mockAgentResponse.project_url
-    })
-    
-    // Update state and render
-    editorState.editorUrl = mockAgentResponse.project_url
-    editorState.needsAgentCreation = false
-    
-    alert('✅ GenSpark editor ready!\n\n' +
-          '🔧 INTEGRATION NOTE:\n' +
-          'To use real GenSpark AI, you need to call create_agent from your backend.\n\n' +
-          'The parameters have been prepared and logged to console.\n' +
-          'In production, your backend would call create_agent and return the real project_url.')
-    
-    renderEditor()
+    alert(message)
     
   } catch (error) {
     hideLoading()

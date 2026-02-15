@@ -37,6 +37,26 @@ function renderApp() {
 
       <!-- Main Content -->
       <main class="max-w-7xl mx-auto px-8 py-12">
+        <!-- Demo Banner -->
+        <div class="bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-xl shadow-lg p-6 mb-8">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-xl font-bold mb-2">
+                <i class="fas fa-star mr-2"></i>
+                Try the Working Demo!
+              </h3>
+              <p class="text-green-50">
+                View a real presentation with GenSpark AI editor integration
+              </p>
+            </div>
+            <button onclick="openEditor('92260480-3626-4139-89e3-818b81f6bd93')" 
+                    class="bg-white text-blue-600 px-6 py-3 rounded-lg hover:bg-green-50 font-semibold">
+              <i class="fas fa-rocket mr-2"></i>
+              View Demo
+            </button>
+          </div>
+        </div>
+
         <!-- Upload Section -->
         <section class="bg-white rounded-xl shadow-lg p-8 mb-8">
           <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
